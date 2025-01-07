@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Scraper } from './scraper.entity';
-import { chromium, Browser, Page } from 'playwright';
+import { chromium } from 'playwright-core';
 
 @Injectable()
 export class ScraperService {
@@ -13,7 +13,9 @@ export class ScraperService {
         const url = 'https://trends.google.com/trending?geo=US';
         const selector = '#trend-table > div.enOdEe-wZVHld-zg7Cn-haAclf > table > tbody:nth-child(3) > tr:nth-child(1) > td.enOdEe-wZVHld-aOtOmf.jvkLtd > div.mZ3RIc';
 
-        const browser = await chromium.launch({ headless: true });
+        const browser = await chromium.connectOverCDP(
+            `wss://connect.browserbase.com?apiKey=${process.env.BROWSERBASE_API_KEY}`
+        );
         const page = await browser.newPage();
 
         await page.goto(url);
