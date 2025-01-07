@@ -1,13 +1,19 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { ScraperService } from './scraper.service';
 
-@Controller('scrape')
+@Controller()
 export class ScraperController {
-	constructor(private readonly scraperService: ScraperService) {}
+    constructor(private readonly scraperService: ScraperService) {}
 
-	@Get()
-	async scrape() {
-		const text = await this.scraperService.scrapeData();
-		return { text };
-	}
+    @Get('scrape')
+    async scrape() {
+        const text = await this.scraperService.scrapeAndSave();
+        return { text };
+    }
+
+    @Get('scrapes')
+    async scrapes() {
+        const history = await this.scraperService.findAll();
+        return { history };
+    }
 }

@@ -1,28 +1,46 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Scraper } from './scraper.entity';
 import { chromium, Browser, Page } from 'playwright';
 
 @Injectable()
 export class ScraperService {
-	private browser: Browser;
-	private url = 'https://trends.google.com/trending?geo=US';
-	private selector = '#trend-table > div.enOdEe-wZVHld-zg7Cn-haAclf > table > tbody:nth-child(3) > tr:nth-child(1) > td.enOdEe-wZVHld-aOtOmf.jvkLtd > div.mZ3RIc';
+    constructor(@InjectRepository(Scraper) private scraperRepository: Repository<Scraper>) {}
 
-	async scrapeData() {
 
-		if (!this.browser) {
-			this.browser = await chromium.launch({ headless: true });
-		}
+    async scrapeAndSave(): Promise<string> {
+        const url = 'https://trends.google.com/trending?geo=US';
+        const selector = '#trend-table > div.enOdEe-wZVHld-zg7Cn-haAclf > table > tbody:nth-child(3) > tr:nth-child(1) > td.enOdEe-wZVHld-aOtOmf.jvkLtd > div.mZ3RIc';
 
-		const page = await this.browser.newPage();
-		await page.goto(this.url);
+        const browser = await chromium.launch({ headless: true });
+        const page = await browser.newPage();
 
-		const element = await page.locator(this.selector);
-		const text = await element.textContent();
+        await page.goto(url);
 
-		if (this.browser) {
-			await this.browser.close();
-		}
+        const element = await page.locator(selector);
+        const text = await element.textContent();
 
-		return text || 'error';
-	}
+        await browser.close();
+
+        try {
+            const scraper = new Scraper();
+            scraper.trending_result = text;
+            this.scraperRepository.save(scraper)
+        } catch (error) {
+            console.error('Error saving trending result: ', error);
+        }
+
+        return text || 'error';
+    }
+
+    async findAll(): Promise<Scraper[]> {
+        try {
+            return await this.scraperRepository.find({
+                order: { timestamp: 'DESC' }
+            });
+        } catch (error) {
+            console.error('/scrapes failed to fetch scraper data');
+        }
+    }
 }
